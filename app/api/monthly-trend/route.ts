@@ -1,27 +1,30 @@
-import { supabase } from '@/lib/supabase'
 import { NextResponse } from 'next/server'
+import { getAllMonthlyTrend, debugFetch } from '@/lib/supabase'
 
 export async function GET(request: Request) {
-  try {
-    const { data, error } = await supabase
-      .from('Bottom to Top')   // <-- FIXED
-      .select('*')
+  const { searchParams } = new URL(request.url)
+  const debug = searchParams.get('debug') === 'true'
 
-    if (error) {
+  try {
+    // Use debug mode if requested
+    const result = debug ? await debugFetch() : await getAllMonthlyTrend()
+
+    if (result.error) {
       return NextResponse.json(
-        { error: error.message },
-        { status: 400 }
+        { error: result.error.message },
+        { status: 500 }
       )
     }
 
     return NextResponse.json({
       success: true,
-      count: data?.length || 0,
-      data: data || [],
+      count: result.data?.length || 0,
+      data: result.data
     })
-  } catch (err) {
+  } catch (error) {
+    console.error('API Error:', error)
     return NextResponse.json(
-      { error: `Server error: ${err}` },
+      { error: 'Failed to fetch data' },
       { status: 500 }
     )
   }

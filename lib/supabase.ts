@@ -19,18 +19,89 @@ export type MonthlyTrendData = {
   'Month': string | null
 }
 
-// Function to fetch all data
+// Function to fetch ALL data with pagination
 export async function getAllMonthlyTrend() {
-  const { data, error } = await supabase
-    .from('Bottom to Top')
-    .select('*')
+  let allData: MonthlyTrendData[] = []
+  let start = 0
+  const pageSize = 1000
+  
+  while (true) {
+    const { data, error } = await supabase
+      .from('Bottom to Top')
+      .select('*')
+      .range(start, start + pageSize - 1)
 
-  if (error) {
-    console.error('Error fetching data:', error)
-    return { data: null, error }
+    if (error) {
+      console.error('Error fetching data:', error)
+      return { data: null, error }
+    }
+
+    if (!data || data.length === 0) {
+      break
+    }
+
+    allData = [...allData, ...data]
+    
+    // If we got less than pageSize, we're done
+    if (data.length < pageSize) {
+      break
+    }
+    
+    start += pageSize
   }
 
-  return { data, error: null }
+  return { data: allData, error: null }
+}
+
+// Debug function to see what's happening
+export async function debugFetch() {
+  console.log('Starting fetch...')
+  
+  // First, get the total count
+  const { count } = await supabase
+    .from('Bottom to Top')
+    .select('*', { count: 'exact', head: true })
+  
+  console.log('Total count in table:', count)
+  
+  // Now fetch in batches
+  let allData: MonthlyTrendData[] = []
+  let start = 0
+  const pageSize = 1000
+  let iteration = 0
+
+  while (true) {
+    iteration++
+    console.log(`Fetching batch ${iteration}: rows ${start} to ${start + pageSize - 1}`)
+    
+    const { data, error } = await supabase
+      .from('Bottom to Top')
+      .select('*')
+      .range(start, start + pageSize - 1)
+
+    if (error) {
+      console.error('Error:', error)
+      return { data: null, error, totalFetched: allData.length }
+    }
+
+    console.log(`Batch ${iteration} returned ${data?.length || 0} rows`)
+    
+    if (!data || data.length === 0) {
+      break
+    }
+
+    allData = [...allData, ...data]
+    
+    if (data.length < pageSize) {
+      console.log('Last batch - stopping')
+      break
+    }
+    
+    start += pageSize
+  }
+
+  console.log('Total rows fetched:', allData.length)
+  return { data: allData, error: null, totalFetched: allData.length }
 }
 
 // Function to fetch by month
@@ -39,6 +110,7 @@ export async function getMonthlyTrendByMonth(month: string) {
     .from('Bottom to Top')
     .select('*')
     .eq('Month', month)
+    .limit(10000) // Set high limit for filtered queries
 
   if (error) {
     console.error('Error fetching data:', error)
@@ -54,6 +126,7 @@ export async function getMonthlyTrendByStore(storeName: string) {
     .from('Bottom to Top')
     .select('*')
     .eq('Store_Name', storeName)
+    .limit(10000)
 
   if (error) {
     console.error('Error fetching data:', error)
@@ -84,6 +157,7 @@ export async function getUniqueMonths() {
   const { data, error } = await supabase
     .from('Bottom to Top')
     .select('Month')
+    .limit(10000)
 
   if (error) {
     console.error('Error fetching months:', error)
@@ -99,6 +173,7 @@ export async function getUniqueStores() {
   const { data, error } = await supabase
     .from('Bottom to Top')
     .select('Store_Name')
+    .limit(10000)
 
   if (error) {
     console.error('Error fetching stores:', error)
@@ -107,19 +182,4 @@ export async function getUniqueStores() {
 
   const uniqueStores = [...new Set(data?.map(d => d['Store_Name']).filter(Boolean))]
   return { stores: uniqueStores, error: null }
-}
-
-// Function to fetch with limit
-export async function getMonthlyTrendLimit(limit: number) {
-  const { data, error } = await supabase
-    .from('Bottom to Top')
-    .select('*')
-    .limit(limit)
-
-  if (error) {
-    console.error('Error fetching data:', error)
-    return { data: null, error }
-  }
-
-  return { data, error: null }
 }

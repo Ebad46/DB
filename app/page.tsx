@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { supabase, type MonthlyTrendData } from '@/lib/supabase'
+import { supabase, type MonthlyTrendData, getAllMonthlyTrend } from '@/lib/supabase'
 import {
   BarChart,
   Bar,
@@ -70,10 +70,8 @@ export default function Dashboard() {
         setLoading(true)
         setError(null)
 
-        const { data: fetchedData, error: fetchError } = await supabase
-          .from('Bottom to Top')
-          .select('*')
-          .limit(1000)
+        // USE THE PAGINATION FUNCTION INSTEAD OF DIRECT QUERY
+        const { data: fetchedData, error: fetchError } = await getAllMonthlyTrend()
 
         if (fetchError) {
           setError(`Database error: ${fetchError.message}`)
@@ -82,6 +80,7 @@ export default function Dashboard() {
         }
 
         if (fetchedData && fetchedData.length > 0) {
+          console.log(`✅ Successfully fetched ${fetchedData.length} records`)
           setData(fetchedData)
 
           const monthOrder: { [key: string]: number } = {
@@ -625,6 +624,9 @@ export default function Dashboard() {
           </h1>
           <p style={{ color: '#64c8ff', fontSize: 'clamp(0.9rem, 2vw, 1.1rem)', margin: '0', opacity: 0.9 }}>
             Monthly Sales & Gallons Analysis - {months.slice(0, 1)[0]} to {months.slice(-1)[0]} (2025 vs 2024)
+          </p>
+          <p style={{ color: '#4caf50', fontSize: 'clamp(0.85rem, 1.8vw, 0.95rem)', margin: '10px 0 0 0', fontWeight: '700' }}>
+            ✅ Total Records Loaded: {data.length}
           </p>
         </div>
 
